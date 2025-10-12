@@ -1,3 +1,4 @@
+#include "MicroBitCompat.h"
 #include "Tests.h"
 
 void 
@@ -27,5 +28,25 @@ light_level_test_raw()
         DMESG("DECAY: %d\n", t);
 
         uBit.sleep(500);
+    }
+}
+
+void light_sensing_event_test()
+{
+    // very similar to AccelerometerTest.shake_test()
+    uBit.messageBus.listen(DEVICE_ID_LIGHT_SENSOR, MICROBIT_DISPLAY_EVT_LIGHTSENSE_DARK, [](MicroBitEvent e) {
+        uBit.display.print("D");
+        uBit.sleep(500);
+        uBit.display.clear();
+    });
+    uBit.messageBus.listen(DEVICE_ID_LIGHT_SENSOR, MICROBIT_DISPLAY_EVT_LIGHTSENSE_LIGHT, [](MicroBitEvent e) {
+        uBit.display.print("L");
+        uBit.sleep(500);
+        uBit.display.clear();
+    });
+
+    while(1)
+    {
+        uBit.sleep(10000);
     }
 }

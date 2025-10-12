@@ -6,9 +6,6 @@ MicroBit uBit;
 int main()
 {
     uBit.init();
-
-    out_of_box_experience();
-
-    microbit_panic( 999 );
+    light_sensing_event_test();
 }
 

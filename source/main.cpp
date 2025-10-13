@@ -6,6 +6,6 @@ MicroBit uBit;
 int main()
 {
     uBit.init();
-    light_sensing_event_test();
+    music_box();
 }
 

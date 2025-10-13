@@ -31,12 +31,15 @@ light_level_test_raw()
     }
 }
 
-// Copied from AudioTest
+/**
+ * To separate out audio control from the runAudio loop.
+ * TODO:  Needs to track where the music stops/starts.
 
-
+ */
 class AudioController
 {
 public:
+    // Copied from AudioTest
     const ManagedString song = ManagedString("010232279000001440226608881023012800000000240000000000000000000000000000,000000440000000440044008880000012800000000240000000000000000000000000000,310232226070801440162408881023012800000100240000000000000000000000000000,310231623093602440093908880000012800000100240000000000000000000000000000");
     bool shouldBePlaying = false;
 
@@ -52,9 +55,12 @@ public:
 
 };
 
-// TODO:  This current does not track where the music started or stopped, so isn't totally like a music box
+
 AudioController audio_controller;
 
+/**
+ * Function to call in the fiber for audio
+ */
 void runAudio()
 {
     while (true)
@@ -72,6 +78,10 @@ void runAudio()
 
 }
 
+/**
+ * Function to call in the fiber for reading the light level. We must continuously read the light level
+ * for the light sense event to be triggered.
+ */
 void readLight()
 {
     while(1)
@@ -82,11 +92,15 @@ void readLight()
     }
 }
 
-void light_sensing_event_test()
+/**
+ * Simulates a music box and demonstrates the new MICROBIT_DISPLAY_EVT_LIGHTSENSE_LIGHT
+ * and MICROBIT_DISPLAY_EVT_LIGHTSENSE_DARK DEVICE_ID_LIGHT_SENSOR values in use
+ * on an event listener.
+ * TODO: Music should start where it stopped, until then, it's not quite like a music box.
+ * TODO: Get some better music.
+ */
+void music_box()
 {
-    // very similar to AccelerometerTest.shake_test()
-    // Only the first event seems to be working, isn't filtering by values, so I've implemented this
-    // to extract the value from the event.
 
     uBit.messageBus.listen(DEVICE_ID_LIGHT_SENSOR, MICROBIT_DISPLAY_EVT_LIGHTSENSE_LIGHT, [](MicroBitEvent e) {
         if (e.value == MICROBIT_DISPLAY_EVT_LIGHTSENSE_LIGHT)

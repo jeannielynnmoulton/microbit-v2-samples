@@ -40,19 +40,6 @@ public:
     const ManagedString song = ManagedString("010232279000001440226608881023012800000000240000000000000000000000000000,000000440000000440044008880000012800000000240000000000000000000000000000,310232226070801440162408881023012800000100240000000000000000000000000000,310231623093602440093908880000012800000100240000000000000000000000000000");
     bool shouldBePlaying = false;
 
-    void runAudio()
-    {
-        if (shouldBePlaying && !uBit.audio.isPlaying()) // checking isPlaying keeps from setting up endless async which we cannot interrupt
-        {
-            playaudio();
-        }
-        if (!shouldBePlaying)
-        {
-            stopaudio();
-        }
-    }
-
-private:
     void playaudio()
     {
         uBit.audio.soundExpressions.playAsync(song);
@@ -67,6 +54,33 @@ private:
 
 // TODO:  This current does not track where the music started or stopped, so isn't totally like a music box
 AudioController audio_controller;
+
+void runAudio()
+{
+    while (true)
+    {
+        if (audio_controller.shouldBePlaying && !uBit.audio.isPlaying()) // checking isPlaying keeps from setting up endless async which we cannot interrupt
+        {
+            audio_controller.playaudio();
+        }
+        if (!audio_controller.shouldBePlaying)
+        {
+            audio_controller.stopaudio();
+        }
+        fiber_sleep(100);
+    }
+
+}
+
+void readLight()
+{
+    while(1)
+    {
+        uBit.display.readLightLevel();
+        uBit.serial.send(uBit.display.getLastLightLevel());
+        fiber_sleep(100);
+    }
+}
 
 void light_sensing_event_test()
 {
@@ -85,12 +99,7 @@ void light_sensing_event_test()
         }
     });
 
-    while(1)
-    {
-        uBit.sleep(100);
-        uBit.display.readLightLevel();
-        audio_controller.runAudio();
-        // debugging
-        uBit.serial.send(uBit.display.getLastLightLevel());
-    }
+    create_fiber(runAudio);
+    create_fiber(readLight);
+    release_fiber();
 }

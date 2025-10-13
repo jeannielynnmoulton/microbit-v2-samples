@@ -40,6 +40,19 @@ public:
     const ManagedString song = ManagedString("010232279000001440226608881023012800000000240000000000000000000000000000,000000440000000440044008880000012800000000240000000000000000000000000000,310232226070801440162408881023012800000100240000000000000000000000000000,310231623093602440093908880000012800000100240000000000000000000000000000");
     bool shouldBePlaying = false;
 
+    void runAudio()
+    {
+        if (shouldBePlaying && !uBit.audio.isPlaying()) // checking isPlaying keeps from setting up endless async which we cannot interrupt
+        {
+            playaudio();
+        }
+        if (!shouldBePlaying)
+        {
+            stopaudio();
+        }
+    }
+
+private:
     void playaudio()
     {
         uBit.audio.soundExpressions.playAsync(song);
@@ -49,6 +62,7 @@ public:
     {
         uBit.audio.soundExpressions.stop();
     }
+
 };
 
 // TODO:  This current does not track where the music started or stopped, so isn't totally like a music box
@@ -75,14 +89,7 @@ void light_sensing_event_test()
     {
         uBit.sleep(100);
         uBit.display.readLightLevel();
-        if (audio_controller.shouldBePlaying && !uBit.audio.isPlaying()) // checking isPlaying keeps from setting up endless async which we cannot interrupt
-        {
-            audio_controller.playaudio();
-        }
-        if (!audio_controller.shouldBePlaying)
-        {
-            audio_controller.stopaudio();
-        }
+        audio_controller.runAudio();
         // debugging
         uBit.serial.send(uBit.display.getLastLightLevel());
     }

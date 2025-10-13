@@ -32,66 +32,57 @@ light_level_test_raw()
 }
 
 // Copied from AudioTest
-const ManagedString names[] = {
-    ManagedString("giggle"),
-    ManagedString("happy"),
-    ManagedString("hello"),
-    ManagedString("mysterious"),
-    ManagedString("sad"),
-    ManagedString("slide"),
-    ManagedString("soaring"),
-    ManagedString("spring"),
-    ManagedString("twinkle"),
-    ManagedString("yawn"),
-    // "sad" but with an additional zero-duration effect which previously caused errors:
-    ManagedString("010232279000001440226608881023012800000000240000000000000000000000000000,000000440000000440044008880000012800000000240000000000000000000000000000,310232226070801440162408881023012800000100240000000000000000000000000000,310231623093602440093908880000012800000100240000000000000000000000000000"),
-    // Just a zero-duration frame.
-    ManagedString("000000440000000440044008880000012800000000240000000000000000000000000000"),
-    ManagedString("")
+
+
+class AudioController
+{
+public:
+    const ManagedString song = ManagedString("010232279000001440226608881023012800000000240000000000000000000000000000,000000440000000440044008880000012800000000240000000000000000000000000000,310232226070801440162408881023012800000100240000000000000000000000000000,310231623093602440093908880000012800000100240000000000000000000000000000");
+    bool shouldBePlaying = false;
+
+    void playaudio()
+    {
+        uBit.audio.soundExpressions.playAsync(song);
+    }
+
+    void stopaudio()
+    {
+        uBit.audio.soundExpressions.stop();
+    }
 };
 
 // TODO:  This current does not track where the music started or stopped, so isn't totally like a music box
-// TODO: Only playing first one because on dark isn't interrupting the playing
-void playaudio()
-{
-    // for (int i = 0; names[i].length() != 0; ++i) {
-    //     DMESG("sound %s", names[i].toCharArray());
-    //     uBit.audio.setVolume(255);
-    //     uBit.audio.soundExpressions.playAsync(names[i]);
-    //
-    //     uBit.audio.setVolume(85);
-    //     uBit.audio.soundExpressions.playAsync(names[i]);
-    // }
-    uBit.audio.soundExpressions.play(names[0]);
-}
-
-void stopaudio()
-{
-    uBit.audio.soundExpressions.stop();
-}
+AudioController audio_controller;
 
 void light_sensing_event_test()
 {
     // very similar to AccelerometerTest.shake_test()
     // Only the first event seems to be working, isn't filtering by values, so I've implemented this
     // to extract the value from the event.
+
     uBit.messageBus.listen(DEVICE_ID_LIGHT_SENSOR, MICROBIT_DISPLAY_EVT_LIGHTSENSE_LIGHT, [](MicroBitEvent e) {
         if (e.value == MICROBIT_DISPLAY_EVT_LIGHTSENSE_LIGHT)
         {
             uBit.display.print("L");
-            playaudio();
-        } else
-        {
+            audio_controller.shouldBePlaying = true;
+        } else {
             uBit.display.print("D");
-            stopaudio();
+            audio_controller.shouldBePlaying = false;
         }
-
     });
 
     while(1)
     {
         uBit.sleep(100);
         uBit.display.readLightLevel();
+        if (audio_controller.shouldBePlaying && !uBit.audio.isPlaying()) // checking isPlaying keeps from setting up endless async which we cannot interrupt
+        {
+            audio_controller.playaudio();
+        }
+        if (!audio_controller.shouldBePlaying)
+        {
+            audio_controller.stopaudio();
+        }
         // debugging
         uBit.serial.send(uBit.display.getLastLightLevel());
     }

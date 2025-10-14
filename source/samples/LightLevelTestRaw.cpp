@@ -33,24 +33,70 @@ light_level_test_raw()
 
 /**
  * To separate out audio control from the runAudio loop.
- * TODO:  Needs to track where the music stops/starts.
-
  */
 class AudioController
 {
 public:
-    // Copied from AudioTest
-    const ManagedString song = ManagedString("010232279000001440226608881023012800000000240000000000000000000000000000,000000440000000440044008880000012800000000240000000000000000000000000000,310232226070801440162408881023012800000100240000000000000000000000000000,310231623093602440093908880000012800000100240000000000000000000000000000");
-    bool shouldBePlaying = false;
+    bool shouldBePlaying = false; // controlled by the event
+
+    // control for which note to play when the music box closes
+    int lastIndexPlayed = 0; // track current last index
+    int resumeIndex = 0; // track last index played on when music stops, i.e., where to resume from
+
+    // song encoding, this is largely taken from speaker_test2()
+    // but I asked ChatGPT to generate periods for "Ode to Joy"
+    int noteLength = 500;
+    int periods[16] = {
+        3030, 3030, 2860, 2550,
+        2550, 2860, 3030, 3400,
+        3820, 3820, 3400, 3030,
+        3030, 3400, 3400, 3400
+    };
+    int periodSize = sizeof(periods)/sizeof(periods[0]);
+    int timeBetweenNotes = 50;
 
     void playaudio()
     {
-        uBit.audio.soundExpressions.playAsync(song);
+        // again, this is largely taken from speaker_test2()
+        uBit.io.runmic.setDigitalValue(0);
+        for (int i=0; i < periodSize; i++)
+        {
+            if (shouldBePlaying)
+            {
+                // debugging
+                // uBit.serial.send(" playing index: ");
+                // uBit.serial.send((i+resumeIndex)%periodSize);
+
+                // save last index
+                lastIndexPlayed = (i+resumeIndex)%periodSize;
+
+                // tone
+                uBit.io.speaker.setAnalogValue(512);
+                uBit.io.speaker.setAnalogPeriodUs(periods[lastIndexPlayed]);
+                uBit.sleep(noteLength);
+
+                // small gap between tones
+                uBit.io.speaker.setAnalogValue(0);
+                uBit.sleep(timeBetweenNotes);
+
+                // increment last index
+                lastIndexPlayed++;
+
+            } else
+            {
+                break;
+            }
+        }
     }
 
     void stopaudio()
     {
-        uBit.audio.soundExpressions.stop();
+        uBit.io.speaker.setAnalogValue(0); // no tone
+        resumeIndex = (lastIndexPlayed)%periodSize; // sets the index to start playing on again to next one
+
+        // debugging
+        // uBit.serial.send(" saving index: ");
+        // uBit.serial.send(resumeIndex);
     }
 
 };
@@ -65,7 +111,7 @@ void runAudio()
 {
     while (true)
     {
-        if (audio_controller.shouldBePlaying && !uBit.audio.isPlaying()) // checking isPlaying keeps from setting up endless async which we cannot interrupt
+        if (audio_controller.shouldBePlaying)
         {
             audio_controller.playaudio();
         }
@@ -73,7 +119,7 @@ void runAudio()
         {
             audio_controller.stopaudio();
         }
-        fiber_sleep(100);
+        fiber_sleep(10);
     }
 
 }
@@ -87,7 +133,6 @@ void readLight()
     while(1)
     {
         uBit.display.readLightLevel();
-        uBit.serial.send(uBit.display.getLastLightLevel());
         fiber_sleep(100);
     }
 }
@@ -96,8 +141,6 @@ void readLight()
  * Simulates a music box and demonstrates the new MICROBIT_DISPLAY_EVT_LIGHTSENSE_LIGHT
  * and MICROBIT_DISPLAY_EVT_LIGHTSENSE_DARK DEVICE_ID_LIGHT_SENSOR values in use
  * on an event listener.
- * TODO: Music should start where it stopped, until then, it's not quite like a music box.
- * TODO: Get some better music.
  */
 void music_box()
 {

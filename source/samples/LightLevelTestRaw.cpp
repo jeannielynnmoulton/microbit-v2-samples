@@ -37,24 +37,26 @@ light_level_test_raw()
 class AudioController
 {
 public:
-    bool shouldBePlaying = false; // controlled by the event
+    volatile bool shouldBePlaying = false; // controlled by the event
 
+private:
     // control for which note to play when the music box closes
     int lastIndexPlayed = 0; // track current last index
     int resumeIndex = 0; // track last index played on when music stops, i.e., where to resume from
 
     // song encoding, this is largely taken from speaker_test2()
     // but I asked ChatGPT to generate periods for "Ode to Joy"
-    int noteLength = 500;
-    int periods[16] = {
+    static constexpr int noteLength = 500;
+    const int periods[16] = {
         3030, 3030, 2860, 2550,
         2550, 2860, 3030, 3400,
         3820, 3820, 3400, 3030,
         3030, 3400, 3400, 3400
     };
-    int periodSize = sizeof(periods)/sizeof(periods[0]);
-    int timeBetweenNotes = 50;
+    static constexpr int periodSize = sizeof(periods)/sizeof(periods[0]);
+    static constexpr int timeBetweenNotes = 50;
 
+public:
     void playaudio()
     {
         // again, this is largely taken from speaker_test2()

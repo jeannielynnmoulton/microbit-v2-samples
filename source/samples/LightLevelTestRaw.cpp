@@ -31,6 +31,16 @@ light_level_test_raw()
     }
 }
 
+// song encoding, this is largely taken from speaker_test2()
+// but I asked ChatGPT to generate periods for "Ode to Joy"
+static constexpr int odeToJoyNoteLength = 500;
+static constexpr int odeToJoy[16] = {
+    3030, 3030, 2860, 2550,
+    2550, 2860, 3030, 3400,
+    3820, 3820, 3400, 3030,
+    3030, 3400, 3400, 3400
+};
+
 /**
  * To separate out audio control from the runAudio loop.
  */
@@ -43,39 +53,33 @@ private:
     // control for which note to play when the music box closes
     int lastIndexPlayed = 0; // track current last index
     int resumeIndex = 0; // track last index played on when music stops, i.e., where to resume from
-
-    // song encoding, this is largely taken from speaker_test2()
-    // but I asked ChatGPT to generate periods for "Ode to Joy"
-    static constexpr int noteLength = 500;
-    const int periods[16] = {
-        3030, 3030, 2860, 2550,
-        2550, 2860, 3030, 3400,
-        3820, 3820, 3400, 3030,
-        3030, 3400, 3400, 3400
-    };
-    static constexpr int periodSize = sizeof(periods)/sizeof(periods[0]);
     static constexpr int timeBetweenNotes = 50;
+    static constexpr int songLength = 16;
 
 public:
-    void playaudio()
+    /**
+     * Plays a 16 note song encoded as an array of periods (microseconds) of the tones.
+     * All tones are played with the same tone length.
+     */
+    void playaudio(const int (&song)[songLength], const int &toneLength)
     {
         // again, this is largely taken from speaker_test2()
         uBit.io.runmic.setDigitalValue(0);
-        for (int i=0; i < periodSize; i++)
+        for (int i=0; i < songLength; i++)
         {
             if (shouldBePlaying)
             {
                 // debugging
                 // uBit.serial.send(" playing index: ");
-                // uBit.serial.send((i+resumeIndex)%periodSize);
+                // uBit.serial.send((i+resumeIndex)%songLength);
 
                 // save last index
-                lastIndexPlayed = (i+resumeIndex)%periodSize;
+                lastIndexPlayed = (i+resumeIndex)%songLength;
 
                 // tone
                 uBit.io.speaker.setAnalogValue(512);
-                uBit.io.speaker.setAnalogPeriodUs(periods[lastIndexPlayed]);
-                uBit.sleep(noteLength);
+                uBit.io.speaker.setAnalogPeriodUs(song[lastIndexPlayed]);
+                uBit.sleep(toneLength);
 
                 // small gap between tones
                 uBit.io.speaker.setAnalogValue(0);
@@ -94,7 +98,7 @@ public:
     void stopaudio()
     {
         uBit.io.speaker.setAnalogValue(0); // no tone
-        resumeIndex = (lastIndexPlayed)%periodSize; // sets the index to start playing on again to next one
+        resumeIndex = lastIndexPlayed%songLength; // sets the index to start playing on again to next one
 
         // debugging
         // uBit.serial.send(" saving index: ");
@@ -115,7 +119,7 @@ void runAudio()
     {
         if (audio_controller.shouldBePlaying)
         {
-            audio_controller.playaudio();
+            audio_controller.playaudio(odeToJoy, odeToJoyNoteLength);
         }
         if (!audio_controller.shouldBePlaying)
         {
